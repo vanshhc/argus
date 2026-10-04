@@ -46,7 +46,7 @@ These are predictions, not results.
 
 1. **User action.** Accept Meta's license on the Hugging Face model page. Log in with `hf auth login`. The assistant does not handle the token.
 2. Download the pinned source revision. Record it in `models/llama/source-model.json`.
-3. Write `ports/llama_ios.py`. Start from Apple's iOS Mistral port. Add Llama 3 RoPE scaling. Reject unsupported config values with a clear error.
+3. Write `src/coreai_ports/llama_ios.py`. Start from Apple's iOS Mistral port. Add Llama 3 RoPE scaling. Reject unsupported config values with a clear error.
 4. Register `llama` with Apple's exporter at run time.
 5. Run the Mac accuracy test in float32: Hugging Face against the port, same prompts, positions up to 4096. Record max logit difference and top-1 agreement. Run it once without the scaling as a control.
 6. Export for iOS with float16 compute. Use no compression first, then 4-bit palettization.
