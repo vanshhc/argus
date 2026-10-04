@@ -6,7 +6,7 @@ This project adds open-source model families to Apple's Core AI exporter for iPh
 
 ## Status
 
-Nothing is supported yet. The Llama port passes accuracy tests with random weights. The first mission is **Llama 3.2 1B Instruct**. See [missions/01-llama-3.2-1b.md](missions/01-llama-3.2-1b.md).
+Nothing is supported yet. The Llama port matches Hugging Face Llama 3.2 1B in float32 on real weights. Export and phone tests are next. The first mission is **Llama 3.2 1B Instruct**. See [missions/01-llama-3.2-1b.md](missions/01-llama-3.2-1b.md).
 
 ## What this project is
 

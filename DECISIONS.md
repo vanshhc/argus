@@ -74,3 +74,17 @@ Regression limits for `tests/test_aimodel_mac.py`. **These were set after the ex
 | Both | Control: default-RoPE diff vs Llama 3 diff | ≥ 5× |
 
 Open choice for the real model: `int8` embeddings (Apple's default) or float16 embeddings. For Llama 3.2 1B the table has 128,256 × 2,048 values: about 263 MB in `int8`, about 525 MB in float16. Measure both on real weights before choosing.
+
+## 2026-10-05: Real-weight PyTorch accuracy test (Llama 3.2 1B Instruct)
+
+Choice: `coreai_ports.compare_torch` runs Hugging Face and the port in float32 on the CPU, in 256-token chunks with a KV cache on both sides. Both models share one copy of the weights (`load_state_dict(assign=True)`). The text is the model's own downloaded `LICENSE.txt` and `USE_POLICY.md`, so the test needs no other data. Only per-position metrics are kept.
+
+Trade-off: license text is not typical chat text. It is real language, and it reaches about 3,000 positions.
+
+Pass limits, set before the first run:
+
+| Check | Pass |
+|---|---|
+| Port vs Hugging Face, max abs logit difference, all positions | < 0.05 |
+| Top-1 agreement, all positions | ≥ 99.9% |
+| Control: Mistral port (no Llama 3 scaling) with the same weights | Max diff ≥ 10 × the port's max diff |

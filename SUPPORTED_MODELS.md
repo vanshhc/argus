@@ -4,7 +4,7 @@ A model is supported only after it passes the Mac accuracy test and runs on a re
 
 | Model | Family | Mac accuracy | iPhone | iOS | Export settings | Prep time | Memory | Status |
 |---|---|---|---|---|---|---|---|---|
-| Llama 3.2 1B Instruct | llama | Random weights pass; real weights pending | — | — | — | — | — | In progress |
+| Llama 3.2 1B Instruct | llama | float32 PyTorch: pass (max 1.7e-4, top-1 100%, 3,055 tokens) | — | — | — | — | — | In progress: export next |
 
 ## Reference (Apple's own support, not this project)
 

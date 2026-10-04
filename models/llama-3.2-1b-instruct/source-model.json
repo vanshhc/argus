@@ -1,0 +1,16 @@
+{
+  "model_id": "meta-llama/Llama-3.2-1B-Instruct",
+  "revision": "9213176726f574b556790deb65791e0c5aa438b6",
+  "license": "llama3.2",
+  "gated": "manual",
+  "files": {
+    "LICENSE.txt": 7712,
+    "USE_POLICY.md": 6021,
+    "config.json": 877,
+    "generation_config.json": 189,
+    "model.safetensors": 2471645608,
+    "special_tokens_map.json": 296,
+    "tokenizer.json": 9085657,
+    "tokenizer_config.json": 54528
+  }
+}

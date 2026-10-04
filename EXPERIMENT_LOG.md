@@ -127,3 +127,41 @@ Two limits failed. The control passed: the error against default RoPE grows with
 ### Next question
 
 How much does `int8` embedding quantization change Llama 3.2 1B outputs with real weights, and how much memory does float16 embeddings cost?
+
+## 2026-10-05: Real-weight PyTorch accuracy, Llama 3.2 1B Instruct
+
+### Hypothesis
+
+With the real weights, the port matches Hugging Face in float32 at all positions. Apple's unmodified Mistral port does not.
+
+### Prediction
+
+The limits in `DECISIONS.md` (2026-10-05, real-weight test), set before the run.
+
+### Setup
+
+- Weights: `meta-llama/Llama-3.2-1B-Instruct` @ `9213176726f574b556790deb65791e0c5aa438b6`. `model.safetensors` SHA-256 `1ff795ff…538f` matches the Hugging Face file ID. Manifest: `models/llama-3.2-1b-instruct/source-model.json`.
+- The real `config.json` matches the mission plan: 16 layers, hidden 2048, heads 32/8/64, `llama3` RoPE factor 32, tied embeddings, vocabulary 128,256, no bias, SiLU.
+- Text: the model's `LICENSE.txt` and `USE_POLICY.md`, 3,055 tokens.
+- float32, CPU, `USE_HF_IMPL=true`. 256-token chunks with a KV cache on both sides. Shared weights.
+- Command: `./run.sh python -m coreai_ports.compare_torch <snapshot> --tokens 4096 --chunk 256 --control`. Results: `results/llama-3.2-1b-instruct/torch-float32.json`.
+
+### Result
+
+| Model | Max abs logit diff | Top-1 | Max diff at 0–63 / 64–255 / 256–1023 / 1024–3054 | Pass |
+|---|---|---|---|---|
+| Llama port | **1.69e-4** | **100%** (0 of 3,055 differ) | 1.7e-4 / 8.7e-5 / 1.0e-4 / 1.3e-4 | Yes |
+| Control: Mistral port | 7.06 | 90.9% (279 differ) | 0.48 / 1.77 / 5.46 / 7.06 | — |
+
+Control ratio: 7.06 / 1.69e-4 ≈ 41,700× (limit ≥ 10×). Run time 298 s; peak resident memory 8.3 GB.
+
+### Interpretation
+
+All three pre-set limits passed. The port matches Hugging Face Llama 3.2 1B in float32 at every position. Without the port, the existing iOS path changes about 1 in 11 predicted tokens on this text, and the error grows with position. This is silent: nothing in Apple's iOS path reports it.
+
+This does not test float16, `int8` embeddings, compression, the compiled file, or the phone.
+
+### Problems fixed during this run
+
+- Memory: building the port allocated its own random weights before `assign=True` replaced them. Peak use reached 10 GB on the 16 GB Mac and it swapped. Fix: build the port on the `meta` device.
+- Speed: PyTorch sent some of the port's 1×1 convolutions to NNPACK, about 1.4 s per call on this CPU. With NNPACK off, a 2-layer forward pass dropped from 5.92 s to 0.12 s with identical output (difference 0.0). `compare_torch` turns NNPACK off.
