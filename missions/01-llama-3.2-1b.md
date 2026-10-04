@@ -36,6 +36,12 @@ These are predictions, not results.
 | Tied input and output embeddings | Yes |
 | Vocabulary | 128,256 |
 
+## Progress (2026-10-04)
+
+- Done with random weights: steps 3, 4, and the accuracy and control parts of step 5. See `EXPERIMENT_LOG.md`.
+- Done: a tiny random Llama exported and compiled through Apple's exporter.
+- Waiting: Meta's approval for the real weights (steps 2, 5 with real weights, 6, 7).
+
 ## Steps
 
 1. **User action.** Accept Meta's license on the Hugging Face model page. Log in with `hf auth login`. The assistant does not handle the token.

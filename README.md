@@ -6,7 +6,7 @@ This project adds open-source model families to Apple's Core AI exporter for iPh
 
 ## Status
 
-Nothing is supported yet. The first mission is **Llama 3.2 1B Instruct**. See [missions/01-llama-3.2-1b.md](missions/01-llama-3.2-1b.md).
+Nothing is supported yet. The Llama port passes accuracy tests with random weights. The first mission is **Llama 3.2 1B Instruct**. See [missions/01-llama-3.2-1b.md](missions/01-llama-3.2-1b.md).
 
 ## What this project is
 
@@ -35,6 +35,16 @@ This project supplies step 1 for new families. It registers each new family with
 - List a model as supported only after it passes the Mac accuracy test and runs on a real iPhone.
 - Give the phone, iOS version, and export settings for each result.
 - Do not publish model weights or exports. Users download weights under each model's license.
+
+## Use
+
+```sh
+bash setup.sh                 # pinned Apple clone and locked environment in vendor/
+./run.sh pytest tests -s      # accuracy tests with random weights; no downloads
+./run.sh python -m coreai_ports.export <hf_model_id> --platform iOS --experimental --compute-precision float16
+```
+
+`coreai_ports.export` is Apple's exporter with this project's ports registered. Models without an Apple preset need `--experimental`.
 
 ## Supported models
 
