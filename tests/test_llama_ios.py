@@ -18,6 +18,8 @@ from coreai_models.models.registry import get_model_entry
 from coreai_models.primitives.ios.cache import KVCacheHandler
 from coreai_ports.llama_ios import LlamaForCausalLMForiOS, check_config
 from coreai_ports.register import register
+from coreai_ports.tiny import LLAMA3_ROPE
+from coreai_ports.tiny import tiny_config as base_tiny_config
 from tests._runner_infra.testing_utils import (
     _construct_causal_mask,
     load_state_dict_from_ref_model,
@@ -27,16 +29,6 @@ from tests._runner_infra.testing_utils import (
 MAX_ABS_DIFF = 1e-3
 CONTROL_MIN_DIFF = 1e-2
 SEQ_LEN = 1000
-
-LLAMA3_ROPE = {
-    "rope_type": "llama3",
-    "rope_theta": 500000.0,
-    "factor": 32.0,
-    "low_freq_factor": 1.0,
-    "high_freq_factor": 4.0,
-    "original_max_position_embeddings": 8192,
-}
-
 
 @pytest.fixture(autouse=True, scope="module")
 def use_hf_impl() -> Iterator[None]:
@@ -50,25 +42,8 @@ def use_hf_impl() -> Iterator[None]:
         os.environ["USE_HF_IMPL"] = original
 
 
-def tiny_config(*, tie_word_embeddings: bool = True, rope: dict | None = None, **overrides) -> LlamaConfig:
-    """Small Llama config. head_dim 16 with theta 500000 covers all three Llama 3 RoPE bands."""
-    values = dict(
-        vocab_size=256,
-        hidden_size=64,
-        intermediate_size=128,
-        num_hidden_layers=2,
-        num_attention_heads=4,
-        num_key_value_heads=2,
-        head_dim=16,
-        max_position_embeddings=1024,
-        rms_norm_eps=1e-5,
-        tie_word_embeddings=tie_word_embeddings,
-        rope_parameters=dict(rope or LLAMA3_ROPE),
-        initializer_range=0.2,
-        attn_implementation="eager",
-    )
-    values.update(overrides)
-    return LlamaConfig(**values)
+def tiny_config(**kwargs) -> LlamaConfig:
+    return base_tiny_config(attn_implementation="eager", **kwargs)
 
 
 def build_pair(config: LlamaConfig, port_class=LlamaForCausalLMForiOS):

@@ -40,8 +40,14 @@ This project supplies step 1 for new families. It registers each new family with
 
 ```sh
 bash setup.sh                 # pinned Apple clone and locked environment in vendor/
-./run.sh pytest tests -s      # accuracy tests with random weights; no downloads
+./run.sh pytest tests -s      # accuracy tests with random weights; no downloads (about 45 s)
 ./run.sh python -m coreai_ports.export <hf_model_id> --platform iOS --experimental --compute-precision float16
+```
+
+Compare an exported bundle with Hugging Face on the Mac:
+
+```sh
+./run.sh python -m coreai_ports.compare_aimodel <bundle_dir> <hf_model_dir> --tokens 512
 ```
 
 `coreai_ports.export` is Apple's exporter with this project's ports registered. Models without an Apple preset need `--experimental`.

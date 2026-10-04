@@ -44,3 +44,33 @@ Pass limits, set before the first run (float32, CPU, `USE_HF_IMPL=true`):
 | Top-1 token agreement, all positions | 100% |
 | Apple's prompt + extend helper (KV cache path) | Passes |
 | Control: Llama config through the unmodified Mistral port | Max difference > 1e-2, so the test can detect missing scaling |
+
+## 2026-10-05: Compare the exported `.aimodel` on the Mac
+
+Problem: the PyTorch tests do not prove that the exporter put the Llama 3 RoPE tables into the compiled file.
+
+Choice: load the exported `.aimodel` with `coreai.runtime.AIModel` on the Mac. Run it the same way as Apple's Swift `StaticShapeEngine`: `load_embeddings`, then `gather_embeddings_16` and `extend_<ctx>_16` per 16-token chunk, with persistent `key_cache`/`value_cache` states, `uint16` positions, the `int32` step, and a mask with -40000 for blocked entries. Compare with three references on the same tokens.
+
+Trade-off: the Mac runtime is not the iPhone runtime. Compute units and specialization can differ. This test finds export and compile errors; it does not replace the phone test.
+
+Pass limits, set before the first run (tiny random model, float16 export, `int8` embeddings, 512 tokens):
+
+| Check | Pass |
+|---|---|
+| `.aimodel` vs our PyTorch port in float16 with the same `int8` embeddings | Max abs logit difference < 0.05; top-1 ≥ 99% |
+| `.aimodel` vs Hugging Face float32 (Llama 3 RoPE) | Max abs logit difference < 0.25; top-1 ≥ 98% |
+| Control: `.aimodel` vs Hugging Face float32 with default RoPE | Max difference ≥ 5 × the difference to the Llama 3 reference |
+
+### Result and new limits (2026-10-05)
+
+The first two limits failed. The cause was `int8` embedding quantization, not the port. See `EXPERIMENT_LOG.md`. The original limits stay recorded as failed.
+
+Regression limits for `tests/test_aimodel_mac.py`. **These were set after the exploratory run**, with margin over the observed values:
+
+| Export | Check | Pass |
+|---|---|---|
+| float16, float embeddings | vs Hugging Face float32: top-1 | 100% |
+| float16, float embeddings | vs Hugging Face float32: max abs diff | < 0.15 (observed 0.062) |
+| Both | Control: default-RoPE diff vs Llama 3 diff | ≥ 5× |
+
+Open choice for the real model: `int8` embeddings (Apple's default) or float16 embeddings. For Llama 3.2 1B the table has 128,256 × 2,048 values: about 263 MB in `int8`, about 525 MB in float16. Measure both on real weights before choosing.

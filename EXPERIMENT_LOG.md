@@ -75,3 +75,55 @@ The port traces and compiles for iOS. The compiled graph has not been compared n
 ### Next question
 
 Does the compiled `.aimodel` give the same logits as PyTorch on the Mac? Apple's `run_compare_coreai` helper may answer this before any phone test.
+
+## 2026-10-05: Compiled `.aimodel` on the Mac
+
+### Hypothesis
+
+The exported `.aimodel` holds the Llama 3 RoPE tables. On the Mac Core AI runtime it gives the same logits as PyTorch.
+
+### Prediction
+
+The pass limits in `DECISIONS.md` (2026-10-05), set before the run.
+
+### Setup
+
+- Tiny random Llama 3 model with a word-level tokenizer (`coreai_ports.tiny`). The full export now completes.
+- Export: iOS, float16, no compression, 512-token context. Default `int8` embeddings.
+- `coreai_ports.compare_aimodel` runs the file like Apple's Swift `StaticShapeEngine`: 16-token chunks of `extend_512_16`, persistent KV states, `uint16` positions, mask -40000. 512 random tokens.
+
+### Result: first run (`int8` embeddings)
+
+| Comparison | Max abs diff | Top-1 | Limit | Pass |
+|---|---|---|---|---|
+| vs our PyTorch port, float16, `int8` embeddings | 0.232 | 97.3% | < 0.05, ≥ 99% | **No** |
+| vs Hugging Face float32, Llama 3 RoPE | 0.659 | 94.3% | < 0.25, ≥ 98% | **No** |
+| Control: vs Hugging Face float32, default RoPE | 6.82 | 77.5% | ≥ 5× the Llama 3 diff | Yes (10.4×) |
+
+Two limits failed. The control passed: the error against default RoPE grows with position (0.64 / 1.71 / 6.82), so the file holds the Llama 3 tables.
+
+### Diagnosis (exploratory, after the failure)
+
+1. Our PyTorch port in float16 with `int8` embeddings is already 0.560 from Hugging Face float32 (top-1 93.9%). The gap exists before compilation.
+2. Export with float embeddings (`--disable-embedding-quantization-ios`), all else equal:
+
+| Comparison | Max abs diff | Top-1 |
+|---|---|---|
+| vs our PyTorch port, float16 | 0.071 | 99.2% |
+| vs Hugging Face float32, Llama 3 RoPE | **0.062** | **100%** |
+| Control: vs default RoPE | 6.10 | 77.3% |
+
+3. Float32 iOS export fails in Apple's pipeline (`fused_dequant_gather_reshape: dtype f16 vs f32`; with float embeddings, a `slice_update` type error). Apple's own Mistral port fails the same way. Float32 is not available as a control.
+4. The 60 "Incompatible element type for ANE" messages also appear on first load of Apple's own Mistral port. A second load shows none (specialization cache).
+
+### Interpretation
+
+- The port and Apple's compiler are correct for this model. With float embeddings, the compiled file matches Hugging Face float32 to 0.062 with 100% top-1.
+- `int8` per-tensor embedding quantization causes most of the error. Llama 3.2 1B ties its embeddings, so the `int8` table also produces the output logits.
+- PyTorch float16 on CPU is a poor reference. It is further from float32 than the compiled file.
+- My first limits did not account for `int8` embeddings and were wrong for this model. I did not change them after the run. New limits for the regression test are in `DECISIONS.md`.
+- These are random weights with `initializer_range` 0.2. The size of the `int8` effect on real Llama weights is unknown.
+
+### Next question
+
+How much does `int8` embedding quantization change Llama 3.2 1B outputs with real weights, and how much memory does float16 embeddings cost?
