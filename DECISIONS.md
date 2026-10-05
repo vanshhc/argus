@@ -114,7 +114,7 @@ Decision rule, set before the first run: keep `int8` embeddings if their top-1 i
 
 - Project name: **Argus**. GitHub repository: `argus`. Python package: `argus_kit`, because `argus` is taken on PyPI.
 - Before this, Argus was the name of the user's iPhone app. The app gets a new name later. The installed app on the phone still shows Argus until then.
-- Local folder: `/Users/Shared/argus` (was `/Users/Shared/coreai-model-ports`).
+- Local folder: `~/Desktop/argus` (moved 2026-10-05, user request; was `/Users/Shared/argus`, before that `/Users/Shared/coreai-model-ports`).
 
 ## 2026-10-05: Compressed exports (Llama 3.2 1B)
 

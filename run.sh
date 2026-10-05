@@ -19,6 +19,8 @@ if [[ "$(git -C "$apple_repo" rev-parse HEAD)" != "$apple_revision" ]]; then
 fi
 
 export PYTHONPATH="$root/src:$apple_repo/python${PYTHONPATH:+:$PYTHONPATH}"
+# Tools in the environment must be on PATH. Compression builds a C++ helper with ninja.
+export PATH="$apple_repo/.venv/bin:$PATH"
 command="$1"
 shift
 exec "$apple_repo/.venv/bin/$command" "$@"
