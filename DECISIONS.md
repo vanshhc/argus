@@ -134,3 +134,10 @@ Limits and rules, set before the first run:
 | `int8` vs float16 embeddings | Keep `int8` if its top-1 is within 1 percentage point of float16 (rule from 2026-10-05) |
 
 Predicted sizes, before the run: about 0.75 GB (`int8` table) and 1.0 GB (float16 table).
+
+## 2026-10-05: Conversion first; compression is a separate track (user decision)
+
+- The main goal of Argus is **conversion** to Apple's Core AI format. Compression only serves the phone's memory limits and is a separate track.
+- Mission 1 is complete when the **uncompressed** Llama `.aimodel` passes the Mac comparison (limits from the 2026-10-05 export entry: top-1 ≥ 99%, max abs diff < 1.0 vs Hugging Face float32, control ≥ 5×).
+- If the Mac cannot load the 4096-token file, verify a smaller uncompressed export instead: first a shorter context (512), then fewer layers (`--num-layers`). These keep the conversion the same and only reduce memory.
+- Compressed results (4-bit `group32`: perplexity +70% with the `int8` table) move to a "Compression for iPhone" track. The 10% perplexity rule applies there.
