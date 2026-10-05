@@ -64,4 +64,6 @@ See [SUPPORTED_MODELS.md](SUPPORTED_MODELS.md).
 
 ## License
 
-Not chosen yet. Apple's code is BSD-3-Clause. Keep Apple's notice in any file that copies its code.
+BSD-3-Clause. See [LICENSE](LICENSE). Apple's `coreai-models` uses the same license. This project uses Apple's code as a dependency and copies none of its files.
+
+Model weights are not part of this project. Each model has its own license. For example, Llama 3.2 uses the Llama 3.2 Community License.

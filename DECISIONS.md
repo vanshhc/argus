@@ -17,7 +17,7 @@ These are the assistant's choices. The user can change them.
 | Register new families at run time | No edits to Apple's files | Uses Apple's internal registry, not a public plugin API |
 | Start the Llama port from Apple's iOS Mistral port | Closest existing architecture | Must check every difference, not only RoPE |
 | Mac accuracy test before any phone test | Finds wrong output early and cheaply | Needs the full model in float32 on the Mac |
-| No license yet | User has not chosen one | Do not publish until chosen |
+| No license yet (superseded 2026-10-05: BSD-3-Clause, user-selected) | User had not chosen one | Do not publish until chosen |
 
 ## Pinned dependency
 
@@ -107,3 +107,5 @@ Decision rule, set before the first run: keep `int8` embeddings if their top-1 i
 
 - This toolkit gets its own **public** GitHub repository. Argus gets a separate **private** repository.
 - Before the first public push: choose a license, confirm the name, and check that no weights, exports, or local diagnostics are in Git.
+
+- License (2026-10-05, user-selected): BSD-3-Clause, the same as Apple's `coreai-models`. Copyright line uses the git name `vanshhc`; the user can change it.
