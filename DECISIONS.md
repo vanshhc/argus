@@ -102,3 +102,8 @@ Limits, set before the first run:
 | Both | Control: default-RoPE diff vs Llama 3 diff | ≥ 5× |
 
 Decision rule, set before the first run: keep `int8` embeddings if their top-1 is within 1 percentage point of the float16-embedding export. Otherwise use float16 embeddings and accept about 263 MB more. The phone test can still change this choice through memory limits.
+
+## 2026-10-05: Publication plan (user-selected)
+
+- This toolkit gets its own **public** GitHub repository. Argus gets a separate **private** repository.
+- Before the first public push: choose a license, confirm the name, and check that no weights, exports, or local diagnostics are in Git.
