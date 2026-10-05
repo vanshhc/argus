@@ -115,3 +115,22 @@ Decision rule, set before the first run: keep `int8` embeddings if their top-1 i
 - Project name: **Argus**. GitHub repository: `argus`. Python package: `argus_kit`, because `argus` is taken on PyPI.
 - Before this, Argus was the name of the user's iPhone app. The app gets a new name later. The installed app on the phone still shows Argus until then.
 - Local folder: `/Users/Shared/argus` (was `/Users/Shared/coreai-model-ports`).
+
+## 2026-10-05: Compressed exports (Llama 3.2 1B)
+
+Problem: the uncompressed files (2.2–2.5 GB) did not load on the Mac's Neural Engine. The iPhone 15 has 6 GB.
+
+Choice: Apple's iOS default compression, `4bit_weight_palettized_group32`. Each layer weight becomes a 4-bit index into a table of 16 values, with one table per group of 32 output channels. Apple's preset leaves the embedding table out of palettization, so two exports differ only in the table: `int8` or float16. Everything else as before (float16 compute, 4096-token context).
+
+New metric: perplexity on the 3,055-token license text, the exponent of the mean negative log-likelihood of each real next token. Lower is better. It measures quality, not only agreement with the reference.
+
+Limits and rules, set before the first run:
+
+| Check | Rule |
+|---|---|
+| File loads and runs on the Mac (default compute units) | Required |
+| Perplexity increase vs Hugging Face float32 | ≤ 10%: ready for the phone test. Above 10%: try `group8` next |
+| Control: default-RoPE diff vs Llama 3 diff | ≥ 5× |
+| `int8` vs float16 embeddings | Keep `int8` if its top-1 is within 1 percentage point of float16 (rule from 2026-10-05) |
+
+Predicted sizes, before the run: about 0.75 GB (`int8` table) and 1.0 GB (float16 table).

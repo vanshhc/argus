@@ -120,6 +120,13 @@ async def run_aimodel(aimodel_path: Path, input_ids: torch.Tensor, chunk: int, c
     return logits, facts
 
 
+def perplexity(logits: torch.Tensor, input_ids: torch.Tensor) -> float:
+    """exp(mean negative log-likelihood of each real next token). Lower is better."""
+    targets = input_ids[0, 1 : logits.shape[0] + 1]
+    log_probs = torch.log_softmax(logits[: targets.shape[0]].float(), dim=-1)
+    return torch.exp(-log_probs.gather(1, targets.unsqueeze(1)).mean()).item()
+
+
 def metrics(diffs: torch.Tensor, matches: torch.Tensor, buckets: list[tuple[int, int]]) -> dict:
     return {
         "max_abs_diff": diffs.max().item(),
@@ -138,14 +145,21 @@ def compare_reference(hf_dir: Path, input_ids: torch.Tensor, actual: np.ndarray,
         config.rope_parameters = {"rope_type": "default", "rope_theta": theta}
     model = LlamaForCausalLM.from_pretrained(hf_dir, config=config, dtype=torch.float32).eval()
     cache = DynamicCache(config=model.config)
-    diffs, matches = [], []
+    diffs, matches, nll_sum, nll_count = [], [], 0.0, 0
+    targets = input_ids[0, 1:]
     for start in range(0, input_ids.shape[1], chunk):
         expected = model(input_ids=input_ids[:, start : start + chunk], past_key_values=cache, use_cache=True).logits[0]
         got = torch.from_numpy(actual[start : start + expected.shape[0]]).float()
         diffs.append((got - expected).abs().amax(dim=-1))
         matches.append(got.argmax(-1) == expected.argmax(-1))
+        step_targets = targets[start : start + expected.shape[0]]
+        log_probs = torch.log_softmax(expected[: step_targets.shape[0]], dim=-1)
+        nll_sum -= log_probs.gather(1, step_targets.unsqueeze(1)).sum().item()
+        nll_count += step_targets.shape[0]
     del model, cache
-    return metrics(torch.cat(diffs), torch.cat(matches), buckets)
+    result = metrics(torch.cat(diffs), torch.cat(matches), buckets)
+    result["reference_perplexity"] = float(np.exp(nll_sum / nll_count))
+    return result
 
 
 @torch.no_grad()
@@ -197,6 +211,8 @@ def main() -> None:
     actual, facts = asyncio.run(run_aimodel(aimodel, input_ids, args.chunk, args.compute_units))
     print(f"Ran {facts['function']} on {seq_len} tokens: {facts}", flush=True)
     results = {"tokens": seq_len, "chunk": args.chunk, "input": "text" if args.text else "random", **facts}
+    if args.text:
+        results["aimodel_perplexity"] = perplexity(torch.from_numpy(actual), input_ids)
     if args.port_reference:
         context = json.loads((args.bundle / "metadata.json").read_text())["language"]["max_context_length"]
         results["vs_port_float16"] = compare_port(args.hf_model, input_ids, actual, context, facts["int8_embeddings"], buckets)
