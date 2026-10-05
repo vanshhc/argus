@@ -1,8 +1,8 @@
-# coreai-model-ports
+# Argus
 
-Working name. It can change before publication.
+Argus adds open-source models to Apple's Core AI on iPhone. In Greek myth, Argus was the giant with a hundred eyes who never stopped watching. This project watches every number: each model is checked against the original before it is listed.
 
-This project adds open-source model families to Apple's Core AI exporter for iPhone. Each model is tested before it is listed.
+It adds new model families to Apple's Core AI exporter. Each model is tested before it is listed.
 
 ## Status
 
@@ -41,16 +41,16 @@ This project supplies step 1 for new families. It registers each new family with
 ```sh
 bash setup.sh                 # pinned Apple clone and locked environment in vendor/
 ./run.sh pytest tests -s      # accuracy tests with random weights; no downloads (about 45 s)
-./run.sh python -m coreai_ports.export <hf_model_id> --platform iOS --experimental --compute-precision float16
+./run.sh python -m argus_kit.export <hf_model_id> --platform iOS --experimental --compute-precision float16
 ```
 
 Compare an exported bundle with Hugging Face on the Mac:
 
 ```sh
-./run.sh python -m coreai_ports.compare_aimodel <bundle_dir> <hf_model_dir> --tokens 512
+./run.sh python -m argus_kit.compare_aimodel <bundle_dir> <hf_model_dir> --tokens 512
 ```
 
-`coreai_ports.export` is Apple's exporter with this project's ports registered. Models without an Apple preset need `--experimental`.
+`argus_kit.export` is Apple's exporter with this project's ports registered. Models without an Apple preset need `--experimental`.
 
 ## Supported models
 
@@ -64,6 +64,6 @@ See [SUPPORTED_MODELS.md](SUPPORTED_MODELS.md).
 
 ## License
 
-BSD-3-Clause. See [LICENSE](LICENSE). Apple's `coreai-models` uses the same license. This project uses Apple's code as a dependency. One function in `src/coreai_ports/llama_ios.py` is adapted from Apple's RoPE cache and keeps Apple's notice.
+BSD-3-Clause. See [LICENSE](LICENSE). Apple's `coreai-models` uses the same license. This project uses Apple's code as a dependency. One function in `src/argus_kit/llama_ios.py` is adapted from Apple's RoPE cache and keeps Apple's notice.
 
 Model weights are not part of this project. Each model has its own license. For example, Llama 3.2 uses the Llama 3.2 Community License.

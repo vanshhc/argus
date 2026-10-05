@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pytest
 
-from coreai_ports.tiny import save_tiny_model
+from argus_kit.tiny import save_tiny_model
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -30,7 +30,7 @@ def run(*args: str) -> None:
 def test_compiled_aimodel_matches_hugging_face(tmp_path: Path, int8_embeddings: bool) -> None:
     model_dir = save_tiny_model(tmp_path / "tiny-llama3")
     export_args = [
-        "coreai_ports.export", str(model_dir), "--platform", "iOS", "--experimental",
+        "argus_kit.export", str(model_dir), "--platform", "iOS", "--experimental",
         "--compute-precision", "float16", "--compression", "none",
         "--output-dir", str(tmp_path), "--output-name", "tiny",
     ]
@@ -38,7 +38,7 @@ def test_compiled_aimodel_matches_hugging_face(tmp_path: Path, int8_embeddings: 
         export_args.append("--disable-embedding-quantization-ios")
     run(*export_args)
     result_path = tmp_path / "result.json"
-    run("coreai_ports.compare_aimodel", str(tmp_path / "tiny"), str(model_dir), "--tokens", "512", "--port-reference", "--json", str(result_path))
+    run("argus_kit.compare_aimodel", str(tmp_path / "tiny"), str(model_dir), "--tokens", "512", "--port-reference", "--json", str(result_path))
     result = json.loads(result_path.read_text())
 
     assert result["int8_embeddings"] == int8_embeddings

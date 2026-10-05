@@ -59,7 +59,7 @@ The port is numerically correct on random weights. The control proves the test d
 
 ### Setup
 
-The same random config, saved locally with a 512-token context. Command: `./run.sh python -m coreai_ports.export vendor/tiny-llama3 --platform iOS --experimental --compute-precision float16 --compression none --max-context-length 512`.
+The same random config, saved locally with a 512-token context. Command: `./run.sh python -m argus_kit.export vendor/tiny-llama3 --platform iOS --experimental --compute-precision float16 --compression none --max-context-length 512`.
 
 ### Result
 
@@ -88,9 +88,9 @@ The pass limits in `DECISIONS.md` (2026-10-05), set before the run.
 
 ### Setup
 
-- Tiny random Llama 3 model with a word-level tokenizer (`coreai_ports.tiny`). The full export now completes.
+- Tiny random Llama 3 model with a word-level tokenizer (`argus_kit.tiny`). The full export now completes.
 - Export: iOS, float16, no compression, 512-token context. Default `int8` embeddings.
-- `coreai_ports.compare_aimodel` runs the file like Apple's Swift `StaticShapeEngine`: 16-token chunks of `extend_512_16`, persistent KV states, `uint16` positions, mask -40000. 512 random tokens.
+- `argus_kit.compare_aimodel` runs the file like Apple's Swift `StaticShapeEngine`: 16-token chunks of `extend_512_16`, persistent KV states, `uint16` positions, mask -40000. 512 random tokens.
 
 ### Result: first run (`int8` embeddings)
 
@@ -144,7 +144,7 @@ The limits in `DECISIONS.md` (2026-10-05, real-weight test), set before the run.
 - The real `config.json` matches the mission plan: 16 layers, hidden 2048, heads 32/8/64, `llama3` RoPE factor 32, tied embeddings, vocabulary 128,256, no bias, SiLU.
 - Text: the model's `LICENSE.txt` and `USE_POLICY.md`, 3,055 tokens.
 - float32, CPU, `USE_HF_IMPL=true`. 256-token chunks with a KV cache on both sides. Shared weights.
-- Command: `./run.sh python -m coreai_ports.compare_torch <snapshot> --tokens 4096 --chunk 256 --control`. Results: `results/llama-3.2-1b-instruct/torch-float32.json`.
+- Command: `./run.sh python -m argus_kit.compare_torch <snapshot> --tokens 4096 --chunk 256 --control`. Results: `results/llama-3.2-1b-instruct/torch-float32.json`.
 
 ### Result
 

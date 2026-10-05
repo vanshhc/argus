@@ -4,7 +4,7 @@ Both models share one copy of the weights. Only per-position metrics are kept, s
 full-vocabulary logits for long inputs never sit in memory at once.
 
 Usage:
-  ./run.sh python -m coreai_ports.compare_torch <hf_model_dir> [--tokens 4096] [--chunk 256] [--control]
+  ./run.sh python -m argus_kit.compare_torch <hf_model_dir> [--tokens 4096] [--chunk 256] [--control]
 """
 
 import argparse
@@ -21,8 +21,8 @@ from transformers import DynamicCache, LlamaForCausalLM  # noqa: E402
 
 from coreai_models.models.ios.mistral import MistralForCausalLMForiOS  # noqa: E402
 from coreai_models.primitives.ios.cache import KVCacheHandler  # noqa: E402
-from coreai_ports.data import TEXT_FILES, text_tokens  # noqa: E402
-from coreai_ports.llama_ios import LlamaForCausalLMForiOS  # noqa: E402
+from argus_kit.data import TEXT_FILES, text_tokens  # noqa: E402
+from argus_kit.llama_ios import LlamaForCausalLMForiOS  # noqa: E402
 
 def causal_mask(context: int, chunk: int, offset: int) -> torch.Tensor:
     mask = torch.zeros((1, context, 1, chunk), dtype=torch.float32)

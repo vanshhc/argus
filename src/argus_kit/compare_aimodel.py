@@ -7,7 +7,7 @@ persistent key/value cache states.
 References are compared chunk by chunk with a KV cache, one model in memory at a time.
 
 Usage:
-  ./run.sh python -m coreai_ports.compare_aimodel <bundle_dir> <hf_model_dir> [--text] [--tokens 512]
+  ./run.sh python -m argus_kit.compare_aimodel <bundle_dir> <hf_model_dir> [--text] [--tokens 512]
 """
 
 import argparse
@@ -21,9 +21,9 @@ import torch
 from coreai.runtime import AIModel, ComputeUnitKind, NDArray, SpecializationOptions
 from transformers import AutoConfig, DynamicCache, LlamaForCausalLM
 
-from coreai_ports.data import text_tokens
-from coreai_ports.llama_ios import LlamaForCausalLMForiOS
-from coreai_ports.register import register
+from argus_kit.data import text_tokens
+from argus_kit.llama_ios import LlamaForCausalLMForiOS
+from argus_kit.register import register
 
 MASK_BLOCKED = -40000.0  # Same value as causalMaskSentinel in Apple's Swift runtime.
 

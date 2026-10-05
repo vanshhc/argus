@@ -2,7 +2,7 @@
 
 ## User-selected (2026-10-04)
 
-- A separate repository from Argus. Argus is the product; this is infrastructure.
+- A separate repository from the iPhone app. The app is the product; this is infrastructure. (The app was called Argus until 2026-10-05; see below.)
 - Goal: support open-source models beyond Apple's iOS list, each one tested.
 - First model: Llama 3.2 1B Instruct.
 
@@ -12,7 +12,7 @@ These are the assistant's choices. The user can change them.
 
 | Choice | Reason | Trade-off |
 |---|---|---|
-| Working name `coreai-model-ports` | Describes the work; no Apple trademark as the first word | Can change before publication |
+| Working name `coreai-model-ports` (superseded 2026-10-05: **Argus**, user-selected) | Describes the work; no Apple trademark as the first word | Can change before publication |
 | Use Apple's `coreai-models` as a pinned dependency, not a fork | Less code to maintain; Apple keeps compression and compilation | Apple's internal API can change between revisions |
 | Register new families at run time | No edits to Apple's files | Uses Apple's internal registry, not a public plugin API |
 | Start the Llama port from Apple's iOS Mistral port | Closest existing architecture | Must check every difference, not only RoPE |
@@ -77,7 +77,7 @@ Open choice for the real model: `int8` embeddings (Apple's default) or float16 e
 
 ## 2026-10-05: Real-weight PyTorch accuracy test (Llama 3.2 1B Instruct)
 
-Choice: `coreai_ports.compare_torch` runs Hugging Face and the port in float32 on the CPU, in 256-token chunks with a KV cache on both sides. Both models share one copy of the weights (`load_state_dict(assign=True)`). The text is the model's own downloaded `LICENSE.txt` and `USE_POLICY.md`, so the test needs no other data. Only per-position metrics are kept.
+Choice: `argus_kit.compare_torch` runs Hugging Face and the port in float32 on the CPU, in 256-token chunks with a KV cache on both sides. Both models share one copy of the weights (`load_state_dict(assign=True)`). The text is the model's own downloaded `LICENSE.txt` and `USE_POLICY.md`, so the test needs no other data. Only per-position metrics are kept.
 
 Trade-off: license text is not typical chat text. It is real language, and it reaches about 3,000 positions.
 
@@ -105,7 +105,13 @@ Decision rule, set before the first run: keep `int8` embeddings if their top-1 i
 
 ## 2026-10-05: Publication plan (user-selected)
 
-- This toolkit gets its own **public** GitHub repository. Argus gets a separate **private** repository.
+- This toolkit gets its own **public** GitHub repository. The iPhone app gets a separate **private** repository.
 - Before the first public push: choose a license, confirm the name, and check that no weights, exports, or local diagnostics are in Git.
 
 - License (2026-10-05, user-selected): BSD-3-Clause, the same as Apple's `coreai-models`. Copyright line uses the git name `vanshhc`; the user can change it.
+
+## 2026-10-05: Name (user-selected)
+
+- Project name: **Argus**. GitHub repository: `argus`. Python package: `argus_kit`, because `argus` is taken on PyPI.
+- Before this, Argus was the name of the user's iPhone app. The app gets a new name later. The installed app on the phone still shows Argus until then.
+- Local folder: `/Users/Shared/argus` (was `/Users/Shared/coreai-model-ports`).

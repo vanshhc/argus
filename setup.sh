@@ -14,7 +14,10 @@ fi
 if [[ ! -d "$apple_repo/.git" ]]; then
     git clone --filter=blob:none "$apple_url" "$apple_repo"
 fi
-git -C "$apple_repo" fetch --quiet origin "$apple_revision"
+# Fetch only when the pinned commit is not already present, so setup also works offline.
+if ! git -C "$apple_repo" cat-file -e "$apple_revision^{commit}" 2>/dev/null; then
+    git -C "$apple_repo" fetch --quiet origin "$apple_revision"
+fi
 git -C "$apple_repo" checkout --quiet --detach "$apple_revision"
 echo "Apple coreai-models revision: $(git -C "$apple_repo" rev-parse HEAD)"
 

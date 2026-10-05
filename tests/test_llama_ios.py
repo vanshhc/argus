@@ -16,10 +16,10 @@ from transformers.models.llama.modeling_llama import LlamaRotaryEmbedding
 from coreai_models.models.ios.mistral import MistralForCausalLMForiOS
 from coreai_models.models.registry import get_model_entry
 from coreai_models.primitives.ios.cache import KVCacheHandler
-from coreai_ports.llama_ios import LlamaForCausalLMForiOS, check_config
-from coreai_ports.register import register
-from coreai_ports.tiny import LLAMA3_ROPE
-from coreai_ports.tiny import tiny_config as base_tiny_config
+from argus_kit.llama_ios import LlamaForCausalLMForiOS, check_config
+from argus_kit.register import register
+from argus_kit.tiny import LLAMA3_ROPE
+from argus_kit.tiny import tiny_config as base_tiny_config
 from tests._runner_infra.testing_utils import (
     _construct_causal_mask,
     load_state_dict_from_ref_model,

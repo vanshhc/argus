@@ -2,7 +2,7 @@
 # Run a command in Apple's environment with this project and Apple's test helpers importable.
 # Examples:
 #   ./run.sh pytest tests
-#   ./run.sh python -m coreai_ports.export meta-llama/Llama-3.2-1B-Instruct --platform iOS
+#   ./run.sh python -m argus_kit.export meta-llama/Llama-3.2-1B-Instruct --platform iOS
 set -euo pipefail
 
 root="$(cd "$(dirname "$0")" && pwd)"

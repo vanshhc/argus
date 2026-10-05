@@ -2,7 +2,7 @@
 
 from coreai_models.models import registry
 
-from coreai_ports.llama_ios import LlamaForCausalLMForiOS
+from argus_kit.llama_ios import LlamaForCausalLMForiOS
 
 PORTS = {"llama": LlamaForCausalLMForiOS}
 

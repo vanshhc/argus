@@ -1,6 +1,6 @@
 """Download pinned Hugging Face source files. This does not run the model.
 
-Usage: ./run.sh python -m coreai_ports.download <model_id> --revision <sha> --manifest <path>
+Usage: ./run.sh python -m argus_kit.download <model_id> --revision <sha> --manifest <path>
 
 Weights go to vendor/hf-cache (ignored by Git). The manifest records the revision and files.
 """

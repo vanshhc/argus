@@ -1,6 +1,6 @@
 """A small random-weight Llama 3 model for tests that need no downloads.
 
-Usage: ./run.sh python -m coreai_ports.tiny <output_dir>
+Usage: ./run.sh python -m argus_kit.tiny <output_dir>
 """
 
 import sys
