@@ -194,3 +194,35 @@ The difference is 262,662,029 bytes. This matches the predicted 128,256 × 2,048
 ### Next question
 
 Does a compressed export (Apple's 4-bit palettization or 6-bit preset) load on the Mac, and how much accuracy does it cost against Hugging Face float32?
+
+## 2026-10-05: Compression track — 4-bit `group32` on Llama 3.2 1B
+
+This is the compression track, separate from the conversion mission (user decision, 2026-10-05).
+
+### Fix needed first
+
+Every compressed export failed with `Centroid calculation failed`. The real error was `Ninja is required to load C++ extensions`: Apple's palettizer compiles a C++ k-means helper, and `run.sh` did not put the environment's `bin/` on `PATH`. Fixed in `run.sh`.
+
+### Setup
+
+Apple's `4bit_weight_palettized_group32` preset. For iOS, palettization uses no calibration data: plain k-means on the weights, 16 values shared by each group of 32 output channels. The embedding table is not palettized. Two exports differ only in the table. Mac comparison with default compute units, 3,055 tokens of license text.
+
+### Result
+
+| Export | File | Loads (default units) | Perplexity (reference 8.58) | Rise | Top-1 | Max diff |
+|---|---|---|---|---|---|---|
+| `int8` table | 0.76 GB | Yes: 62 s load, 217 s run | 14.59 | +70.1% | 64.4% | 15.7 |
+| float16 table | 1.02 GB | Yes: 64 s load, 215 s run | 14.45 | +68.5% | 64.3% | 16.0 |
+
+- Perplexity rule (≤ 10%): **fails** for both.
+- Control (≥ 5×): **fails** (ratio 1.0). The compression error is larger than the RoPE effect, so this control cannot separate them. The RoPE fix was proven on the uncompressed model.
+- Embedding rule: top-1 differs by 0.1 points, so keep the `int8` table.
+- A tiny random model lost even more (top-1 36%); random weights have no structure to compress.
+
+### Interpretation
+
+The compressed files load and run on the Mac, but plain 4-bit `group32` costs too much quality for this 1B model. The embedding table is not the cause. Apple's own small-model presets avoid plain 4-bit: Qwen3 0.6B uses mixed 4/8-bit, Qwen3 1.7B and SmolLM2 1.7B use 6-bit.
+
+### Next question (compression track)
+
+How much of the loss do `group8` and 6-bit recover, and at what size?

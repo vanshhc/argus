@@ -75,7 +75,9 @@ async def run_aimodel(aimodel_path: Path, input_ids: torch.Tensor, chunk: int, c
         if compute_units == "gpu"
         else SpecializationOptions.default()
     )
+    print(f"Loading {aimodel_path.name} (compute units: {compute_units})...", flush=True)
     model = await AIModel.load(aimodel_path, options)
+    print(f"Loaded in {time.perf_counter() - started:.1f} s", flush=True)
     names = set(model.function_names)
     contexts = sorted(int(n.split("_")[1]) for n in names if n.startswith("extend_") and n.endswith(f"_{chunk}"))
     seq_len = input_ids.shape[1]
