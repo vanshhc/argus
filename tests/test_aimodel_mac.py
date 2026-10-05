@@ -38,7 +38,7 @@ def test_compiled_aimodel_matches_hugging_face(tmp_path: Path, int8_embeddings: 
         export_args.append("--disable-embedding-quantization-ios")
     run(*export_args)
     result_path = tmp_path / "result.json"
-    run("coreai_ports.compare_aimodel", str(tmp_path / "tiny"), str(model_dir), "--tokens", "512", "--json", str(result_path))
+    run("coreai_ports.compare_aimodel", str(tmp_path / "tiny"), str(model_dir), "--tokens", "512", "--port-reference", "--json", str(result_path))
     result = json.loads(result_path.read_text())
 
     assert result["int8_embeddings"] == int8_embeddings

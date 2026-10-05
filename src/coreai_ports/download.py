@@ -36,6 +36,12 @@ def main() -> None:
             ignore_patterns=SKIP,
         )
     )
+    # Point refs/main at the pinned revision so offline loads by model ID
+    # (HF_HUB_OFFLINE=1) resolve to exactly these files.
+    refs = folder.parents[1] / "refs"
+    refs.mkdir(exist_ok=True)
+    (refs / "main").write_text(args.revision)
+
     files = sorted(p for p in folder.rglob("*") if p.is_file())
     if not any(p.suffix == ".safetensors" for p in files):
         raise SystemExit("Download contains no safetensors weights")

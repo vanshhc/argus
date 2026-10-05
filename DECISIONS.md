@@ -88,3 +88,17 @@ Pass limits, set before the first run:
 | Port vs Hugging Face, max abs logit difference, all positions | < 0.05 |
 | Top-1 agreement, all positions | ≥ 99.9% |
 | Control: Mistral port (no Llama 3 scaling) with the same weights | Max diff ≥ 10 × the port's max diff |
+
+## 2026-10-05: Llama 3.2 1B exports — `int8` vs float16 embeddings
+
+Setup: two iOS exports. The only difference is the embedding table: `int8` (Apple's default) or float16 (`--disable-embedding-quantization-ios`). Both use float16 compute, a 4096-token context, and no weight compression. Compression is a separate test. Each file runs on the Mac with `compare_aimodel --text` (3,055 tokens), against Hugging Face float32.
+
+Limits, set before the first run:
+
+| Export | Check | Pass |
+|---|---|---|
+| float16 embeddings | Top-1 vs Hugging Face float32 | ≥ 99% |
+| float16 embeddings | Max abs logit diff | < 1.0 |
+| Both | Control: default-RoPE diff vs Llama 3 diff | ≥ 5× |
+
+Decision rule, set before the first run: keep `int8` embeddings if their top-1 is within 1 percentage point of the float16-embedding export. Otherwise use float16 embeddings and accept about 263 MB more. The phone test can still change this choice through memory limits.

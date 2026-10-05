@@ -4,20 +4,24 @@ The driver calls the functions the same way as Apple's Swift StaticShapeEngine:
 load_embeddings, then gather_embeddings_<q> and extend_<ctx>_<q> per chunk, with
 persistent key/value cache states.
 
+References are compared chunk by chunk with a KV cache, one model in memory at a time.
+
 Usage:
-  ./run.sh python -m coreai_ports.compare_aimodel <bundle_dir> <hf_model_dir> [--tokens 512] [--chunk 16]
+  ./run.sh python -m coreai_ports.compare_aimodel <bundle_dir> <hf_model_dir> [--text] [--tokens 512]
 """
 
 import argparse
 import asyncio
 import json
+import time
 from pathlib import Path
 
 import numpy as np
 import torch
-from coreai.runtime import AIModel, NDArray
-from transformers import AutoConfig, LlamaForCausalLM
+from coreai.runtime import AIModel, ComputeUnitKind, NDArray, SpecializationOptions
+from transformers import AutoConfig, DynamicCache, LlamaForCausalLM
 
+from coreai_ports.data import text_tokens
 from coreai_ports.llama_ios import LlamaForCausalLMForiOS
 from coreai_ports.register import register
 
@@ -61,9 +65,17 @@ def causal_mask(context: int, chunk: int, step: int, tokens_in_chunk: int) -> np
     return mask
 
 
-async def run_aimodel(aimodel_path: Path, input_ids: torch.Tensor, chunk: int) -> tuple[np.ndarray, bool]:
-    """Return logits and whether the export quantized the embedding table to int8."""
-    model = await AIModel.load(aimodel_path)
+async def run_aimodel(aimodel_path: Path, input_ids: torch.Tensor, chunk: int, compute_units: str = "default") -> tuple[np.ndarray, dict]:
+    """Return float16 logits (positions, vocab) and run facts."""
+    started = time.perf_counter()
+    # "gpu" prefers the GPU. The runtime has no GPU-only option, and its CPU backend
+    # cannot load iOS exports (AIModelError 1).
+    options = (
+        SpecializationOptions.from_preferred_compute_unit_kind(ComputeUnitKind.gpu())
+        if compute_units == "gpu"
+        else SpecializationOptions.default()
+    )
+    model = await AIModel.load(aimodel_path, options)
     names = set(model.function_names)
     contexts = sorted(int(n.split("_")[1]) for n in names if n.startswith("extend_") and n.endswith(f"_{chunk}"))
     seq_len = input_ids.shape[1]
@@ -76,9 +88,10 @@ async def run_aimodel(aimodel_path: Path, input_ids: torch.Tensor, chunk: int) -
     extend = model.load_function(f"extend_{context}_{chunk}")
     table = (await embeddings({}))["embedding_table"]
     int8_embeddings = "int8" in str(embeddings.desc.output_descriptor("embedding_table"))
+    loaded = time.perf_counter()
 
     state = {name: zeroed_state(extend.desc.state_descriptor(name)) for name in extend.desc.state_names}
-    logits = []
+    logits = None
     for step in range(0, seq_len, chunk):
         ids = input_ids[0, step : step + chunk].to(torch.int32)
         count = ids.numel()
@@ -92,27 +105,55 @@ async def run_aimodel(aimodel_path: Path, input_ids: torch.Tensor, chunk: int) -
             "causal_mask": NDArray(data=causal_mask(context, chunk, step, count)),
             "embedding_table": table,
         }
-        out = await extend(inputs, state=state)
-        logits.append(out["out_logits"].numpy().reshape(chunk, -1)[:count])
-    return np.concatenate(logits).astype(np.float32)[None], int8_embeddings
+        out = (await extend(inputs, state=state))["out_logits"].numpy().reshape(chunk, -1)[:count]
+        if logits is None:
+            logits = np.empty((seq_len, out.shape[-1]), dtype=np.float16)
+        logits[step : step + count] = out
+    finished = time.perf_counter()
+    facts = {
+        "int8_embeddings": int8_embeddings,
+        "function": f"extend_{context}_{chunk}",
+        "compute_units": compute_units,
+        "mac_load_seconds": round(loaded - started, 2),
+        "mac_run_seconds": round(finished - loaded, 2),
+    }
+    return logits, facts
+
+
+def metrics(diffs: torch.Tensor, matches: torch.Tensor, buckets: list[tuple[int, int]]) -> dict:
+    return {
+        "max_abs_diff": diffs.max().item(),
+        "top1": matches.float().mean().item(),
+        "top1_mismatches": int((~matches).sum().item()),
+        "buckets": {f"{a}-{b - 1}": diffs[a:b].max().item() for a, b in buckets if a < len(diffs)},
+    }
 
 
 @torch.no_grad()
-def reference_logits(hf_dir: Path, input_ids: torch.Tensor, rope_type: str) -> np.ndarray:
+def compare_reference(hf_dir: Path, input_ids: torch.Tensor, actual: np.ndarray, rope_type: str, buckets, chunk: int = 256) -> dict:
+    """Hugging Face float32, run in chunks with a KV cache."""
     config = AutoConfig.from_pretrained(hf_dir)
     if rope_type == "default":
         theta = config.rope_parameters["rope_theta"]
         config.rope_parameters = {"rope_type": "default", "rope_theta": theta}
-    model = LlamaForCausalLM.from_pretrained(hf_dir, config=config, torch_dtype=torch.float32).eval()
-    return model(input_ids).logits.numpy()
+    model = LlamaForCausalLM.from_pretrained(hf_dir, config=config, dtype=torch.float32).eval()
+    cache = DynamicCache(config=model.config)
+    diffs, matches = [], []
+    for start in range(0, input_ids.shape[1], chunk):
+        expected = model(input_ids=input_ids[:, start : start + chunk], past_key_values=cache, use_cache=True).logits[0]
+        got = torch.from_numpy(actual[start : start + expected.shape[0]]).float()
+        diffs.append((got - expected).abs().amax(dim=-1))
+        matches.append(got.argmax(-1) == expected.argmax(-1))
+    del model, cache
+    return metrics(torch.cat(diffs), torch.cat(matches), buckets)
 
 
 @torch.no_grad()
-def port_logits(hf_dir: Path, input_ids: torch.Tensor, context: int, int8_embeddings: bool) -> np.ndarray:
-    """Our PyTorch port in float16, with the same embedding type as the export."""
+def compare_port(hf_dir: Path, input_ids: torch.Tensor, actual: np.ndarray, context: int, int8_embeddings: bool, buckets) -> dict:
+    """Our PyTorch port in float16, with the same embedding type as the export. Small models only."""
     from coreai_models.primitives.ios.cache import KVCacheHandler
 
-    reference = LlamaForCausalLM.from_pretrained(hf_dir, torch_dtype=torch.float32).eval()
+    reference = LlamaForCausalLM.from_pretrained(hf_dir, dtype=torch.float32).eval()
     config = reference.config
     config.max_position_embeddings = context
     port = LlamaForCausalLMForiOS(config, "cpu", disable_embedding_quantization=not int8_embeddings).eval()
@@ -124,16 +165,9 @@ def port_logits(hf_dir: Path, input_ids: torch.Tensor, context: int, int8_embedd
     key_cache, value_cache = KVCacheHandler.get_kv_cache_from_hf(config, dtype=torch.float16)
     mask = torch.from_numpy(causal_mask(context, seq_len, 0, seq_len))
     out = port(input_ids, torch.arange(seq_len).unsqueeze(0), torch.tensor([0], dtype=torch.int32), mask, key_cache, value_cache)
-    return out.reshape(1, seq_len, -1).float().numpy()
-
-
-def metrics(actual: np.ndarray, expected: np.ndarray, buckets: list[tuple[int, int]]) -> dict:
-    per_position = np.abs(actual - expected).max(axis=-1)[0]
-    return {
-        "max_abs_diff": float(per_position.max()),
-        "top1": float((actual.argmax(-1) == expected.argmax(-1)).mean()),
-        "buckets": {f"{a}-{b - 1}": float(per_position[a:b].max()) for a, b in buckets if a < len(per_position)},
-    }
+    expected = out.reshape(seq_len, -1).float()
+    got = torch.from_numpy(actual).float()
+    return metrics((got - expected).abs().amax(dim=-1), got.argmax(-1) == expected.argmax(-1), buckets)
 
 
 def main() -> None:
@@ -143,29 +177,35 @@ def main() -> None:
     parser.add_argument("--tokens", type=int, default=512)
     parser.add_argument("--chunk", type=int, default=16)
     parser.add_argument("--seed", type=int, default=1)
+    parser.add_argument("--text", action="store_true", help="Use the model's own license text, not random tokens")
+    parser.add_argument("--port-reference", action="store_true", help="Also compare with the float16 PyTorch port")
+    parser.add_argument("--compute-units", choices=["default", "gpu"], default="default")
     parser.add_argument("--json", type=Path, help="Write the results to this file")
     args = parser.parse_args()
 
     register()
+    torch.backends.nnpack.set_flags(False)  # NNPACK is very slow for the port's 1x1 convolutions.
     aimodel = next(args.bundle.glob("*.aimodel"))
-    vocab_size = AutoConfig.from_pretrained(args.hf_model).vocab_size
-    torch.manual_seed(args.seed)
-    input_ids = torch.randint(2, vocab_size, (1, args.tokens))
-    buckets = [(0, 64), (64, 256), (256, args.tokens)]
+    if args.text:
+        input_ids = text_tokens(args.hf_model, args.tokens)
+    else:
+        torch.manual_seed(args.seed)
+        input_ids = torch.randint(2, AutoConfig.from_pretrained(args.hf_model).vocab_size, (1, args.tokens))
+    seq_len = input_ids.shape[1]
+    buckets = [(0, 64), (64, 256), (256, 1024), (1024, seq_len)]
 
-    actual, int8_embeddings = asyncio.run(run_aimodel(aimodel, input_ids, args.chunk))
-    context = json.loads((args.bundle / "metadata.json").read_text())["language"]["max_context_length"]
-    results = {
-        "tokens": args.tokens,
-        "chunk": args.chunk,
-        "int8_embeddings": int8_embeddings,
-        "vs_port_float16": metrics(actual, port_logits(args.hf_model, input_ids, context, int8_embeddings), buckets),
-        "vs_hf_llama3_float32": metrics(actual, reference_logits(args.hf_model, input_ids, "llama3"), buckets),
-        "vs_hf_default_rope_float32": metrics(actual, reference_logits(args.hf_model, input_ids, "default"), buckets),
-    }
+    actual, facts = asyncio.run(run_aimodel(aimodel, input_ids, args.chunk, args.compute_units))
+    print(f"Ran {facts['function']} on {seq_len} tokens: {facts}", flush=True)
+    results = {"tokens": seq_len, "chunk": args.chunk, "input": "text" if args.text else "random", **facts}
+    if args.port_reference:
+        context = json.loads((args.bundle / "metadata.json").read_text())["language"]["max_context_length"]
+        results["vs_port_float16"] = compare_port(args.hf_model, input_ids, actual, context, facts["int8_embeddings"], buckets)
+    results["vs_hf_llama3_float32"] = compare_reference(args.hf_model, input_ids, actual, "llama3", buckets)
+    results["vs_hf_default_rope_float32"] = compare_reference(args.hf_model, input_ids, actual, "default", buckets)
     text = json.dumps(results, indent=2)
     print(text)
     if args.json:
+        args.json.parent.mkdir(parents=True, exist_ok=True)
         args.json.write_text(text + "\n")
 
 

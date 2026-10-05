@@ -42,7 +42,8 @@ These are predictions, not results.
 - Done: a tiny random Llama exported and compiled through Apple's exporter.
 - Done (2026-10-05): the compiled tiny `.aimodel` runs on the Mac Core AI runtime. It holds the Llama 3 RoPE tables. With float embeddings it matches Hugging Face float32 (top-1 100%). `int8` embeddings cause most of the remaining error.
 - Done (2026-10-05): steps 2 and 5 with real weights. The port matches Hugging Face in float32 at all 3,055 positions (max 1.7e-4, top-1 100%). The control differs by up to 7.06.
-- Next: step 6 (export, `int8` vs float16 embeddings), then step 7 (iPhone).
+- Done (2026-10-05): uncompressed exports with `int8` and float16 embeddings (2.22 GB and 2.48 GB).
+- Blocked: the uncompressed file did not load on the Mac (Neural Engine out of memory). Next: compressed exports, then the embedding comparison, then step 7 (iPhone).
 
 ## Steps
 

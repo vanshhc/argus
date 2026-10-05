@@ -17,21 +17,12 @@ from pathlib import Path
 os.environ["USE_HF_IMPL"] = "true"
 
 import torch  # noqa: E402
-from transformers import AutoTokenizer, DynamicCache, LlamaForCausalLM  # noqa: E402
+from transformers import DynamicCache, LlamaForCausalLM  # noqa: E402
 
 from coreai_models.models.ios.mistral import MistralForCausalLMForiOS  # noqa: E402
 from coreai_models.primitives.ios.cache import KVCacheHandler  # noqa: E402
+from coreai_ports.data import TEXT_FILES, text_tokens  # noqa: E402
 from coreai_ports.llama_ios import LlamaForCausalLMForiOS  # noqa: E402
-
-TEXT_FILES = ("LICENSE.txt", "USE_POLICY.md")
-
-
-def text_tokens(hf_dir: Path, limit: int) -> torch.Tensor:
-    tokenizer = AutoTokenizer.from_pretrained(hf_dir)
-    text = "\n\n".join((hf_dir / name).read_text() for name in TEXT_FILES if (hf_dir / name).exists())
-    ids = tokenizer(text, return_tensors="pt").input_ids[:, :limit]
-    return ids
-
 
 def causal_mask(context: int, chunk: int, offset: int) -> torch.Tensor:
     mask = torch.zeros((1, context, 1, chunk), dtype=torch.float32)

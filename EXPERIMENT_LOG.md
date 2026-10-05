@@ -165,3 +165,32 @@ This does not test float16, `int8` embeddings, compression, the compiled file, o
 
 - Memory: building the port allocated its own random weights before `assign=True` replaced them. Peak use reached 10 GB on the 16 GB Mac and it swapped. Fix: build the port on the `meta` device.
 - Speed: PyTorch sent some of the port's 1×1 convolutions to NNPACK, about 1.4 s per call on this CPU. With NNPACK off, a 2-layer forward pass dropped from 5.92 s to 0.12 s with identical output (difference 0.0). `compare_torch` turns NNPACK off.
+
+## 2026-10-05: Llama 3.2 1B exports and Mac load (no accuracy result)
+
+### Exports (succeeded)
+
+Float16 compute, 4096-token context, no weight compression. Offline export by model ID (`HF_HUB_OFFLINE=1`; `refs/main` points to the pinned revision).
+
+| Export | `main.mlirb` | Time | Peak memory |
+|---|---|---|---|
+| `int8` embeddings | 2,220,329,407 bytes | 113 s | 6.6 GB |
+| float16 embeddings | 2,482,991,436 bytes | 113 s | 6.9 GB |
+
+The difference is 262,662,029 bytes. This matches the predicted 128,256 × 2,048 bytes for the embedding table. Both bundles record `meta-llama/Llama-3.2-1B-Instruct` and include the tokenizer and chat template.
+
+### Mac load (failed)
+
+1. Default compute units, `int8` export: after about 20 minutes, the Neural Engine reported `Program load failed — no memory (transient; retry under lower memory pressure)`. MPSGraph then aborted the process (exit 134). Peak resident memory 12.2 GB. No token ran. The float16-embedding run was stopped because it would load the same way.
+2. Compute-unit options on the tiny export: default and GPU-preferred load. CPU-preferred and CPU-only fail with `AIModelError error 1`. The runtime has no GPU-only option; GPU-preferred still allows the Neural Engine.
+3. GPU-preferred, `int8` export: no output after 2 hours (background time limit). The process never finished `AIModel.load`. The first Python log line came 17 minutes after start, so the Mac may have slept or been under heavy load. The cause of the stall is not known.
+
+### Interpretation
+
+- The export works for the full model. The uncompressed file (2.2 GB) did not load on this 16 GB Mac. The Neural Engine ran out of memory.
+- The iPhone 15 has 6 GB. An uncompressed export is very unlikely to load there. Weight compression is probably required, not optional.
+- The `int8` vs float16 embedding comparison has no result. Repeat it on compressed exports.
+
+### Next question
+
+Does a compressed export (Apple's 4-bit palettization or 6-bit preset) load on the Mac, and how much accuracy does it cost against Hugging Face float32?
