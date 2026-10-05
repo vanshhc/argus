@@ -60,7 +60,8 @@ class LlamaRoPECache(RoPECache):
         return inv_freq.float()
 
     def _compute_sin_and_cos(self, dtype: torch.dtype = torch.float32) -> None:
-        # Same steps as Apple's RoPECache._compute_sin_and_cos; only the frequencies differ.
+        # Adapted from RoPECache._compute_sin_and_cos in Apple's coreai-models
+        # (Copyright 2026 Apple Inc., BSD-3-Clause). Only the frequencies differ.
         with torch.device("cpu"):
             theta = self._inverse_frequencies()
             if self._use_hf_impl:

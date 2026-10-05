@@ -64,6 +64,6 @@ See [SUPPORTED_MODELS.md](SUPPORTED_MODELS.md).
 
 ## License
 
-BSD-3-Clause. See [LICENSE](LICENSE). Apple's `coreai-models` uses the same license. This project uses Apple's code as a dependency and copies none of its files.
+BSD-3-Clause. See [LICENSE](LICENSE). Apple's `coreai-models` uses the same license. This project uses Apple's code as a dependency. One function in `src/coreai_ports/llama_ios.py` is adapted from Apple's RoPE cache and keeps Apple's notice.
 
 Model weights are not part of this project. Each model has its own license. For example, Llama 3.2 uses the Llama 3.2 Community License.
